@@ -1,5 +1,5 @@
 import z from "zod";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { View, Image, TouchableOpacity, Text, FlatList } from "react-native";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -11,12 +11,14 @@ import { Button } from "./components/Button";
 import { Filter } from "./components/Filter";
 
 import { filterStatus } from "./types/filterStatus";
-
-interface ItemData {
-  id: number;
-  status: filterStatus;
-  description: string;
-}
+import {
+  addItem,
+  getByStatus,
+  getItems,
+  ItemData,
+  removeItem,
+  toggleItemStatus,
+} from "./storage/itemsStorage";
 
 export default function App() {
   const [filter, setFilter] = useState<filterStatus>(filterStatus.PENDING);
@@ -39,41 +41,46 @@ export default function App() {
       description: "",
     },
   });
+
+  async function getItemsLocalStorage() {
+    try {
+      const response = await getItems();
+      console.log(response);
+      setItems(response);
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  async function handleRemoveItem(id: string) {
+    try {
+      await removeItem(id);
+      await getItemsLocalStorage();
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  async function handleToggleItemStatus(id: string) {
+    try {
+      await toggleItemStatus(id);
+      await getItemsLocalStorage();
+    } catch (error) {
+      console.log(error);
+    }
+  }
   const onSubmit = async (data: FormData) => {
     const newItem: ItemData = {
-      id: new Date().getTime(),
+      id: String(Date.now()),
       status: filterStatus.PENDING,
       description: data.description,
     };
 
-    try {
-      setItems((oldItems) => [...oldItems, newItem]);
-      reset();
-    } catch (error) {
-      console.log(error);
-    }
-  };
+    await addItem(newItem);
+    await getItemsLocalStorage();
+    reset();
 
-  const handleRemove = (id: number) => {
-    console.log(id);
-    const filteredItems = items.filter((item) => item.id !== id);
-    setItems(filteredItems);
-  };
-
-  const handleToggleStatus = (id: number) => {
-    const updatedItems = items.map((item) => {
-      if (item.id === id) {
-        return {
-          ...item,
-          status:
-            item.status === filterStatus.DONE
-              ? filterStatus.PENDING
-              : filterStatus.DONE,
-        };
-      }
-      return item;
-    });
-    setItems(updatedItems);
+    console.log("console enviei");
   };
 
   const handleFilterStatus = (status: filterStatus) => {
@@ -84,6 +91,10 @@ export default function App() {
     filterStatus.DONE,
     filterStatus.PENDING,
   ];
+
+  useEffect(() => {
+    getItemsLocalStorage();
+  }, []);
 
   return (
     <View style={styles.container}>
@@ -126,8 +137,12 @@ export default function App() {
           renderItem={({ item }) => (
             <Item
               data={item}
-              onToggleStatus={() => handleToggleStatus(item.id)}
-              onRemove={() => handleRemove(item.id)}
+              onToggleStatus={() => {
+                handleToggleItemStatus(item.id);
+              }}
+              onRemove={() => {
+                handleRemoveItem(item.id);
+              }}
             />
           )}
           contentContainerStyle={styles.listContent}
