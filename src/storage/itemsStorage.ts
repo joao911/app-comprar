@@ -65,3 +65,8 @@ export async function toggleItemStatus(id: string): Promise<ItemData[]> {
 
   return updatedItems;
 }
+
+export async function removeAllItems() {
+  const items = await AsyncStorage.removeItem(ITEMS_STORAGE_KEY);
+  return items;
+}

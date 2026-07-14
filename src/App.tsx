@@ -16,6 +16,7 @@ import {
   getByStatus,
   getItems,
   ItemData,
+  removeAllItems,
   removeItem,
   toggleItemStatus,
 } from "./storage/itemsStorage";
@@ -23,6 +24,8 @@ import {
 export default function App() {
   const [filter, setFilter] = useState<filterStatus>(filterStatus.PENDING);
   const [items, setItems] = useState<ItemData[]>([]);
+
+  console.log("filter", filter);
 
   const formSchema = z.object({
     description: z.string().min(1, "Descrição é obrigatória"),
@@ -44,7 +47,7 @@ export default function App() {
 
   async function getItemsLocalStorage() {
     try {
-      const response = await getItems();
+      const response = await getByStatus(filter);
       console.log(response);
       setItems(response);
     } catch (error) {
@@ -79,8 +82,6 @@ export default function App() {
     await addItem(newItem);
     await getItemsLocalStorage();
     reset();
-
-    console.log("console enviei");
   };
 
   const handleFilterStatus = (status: filterStatus) => {
@@ -92,9 +93,18 @@ export default function App() {
     filterStatus.PENDING,
   ];
 
+  async function handleRemoveAllItems() {
+    try {
+      await removeAllItems();
+      await getItemsLocalStorage();
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
   useEffect(() => {
     getItemsLocalStorage();
-  }, []);
+  }, [filter]);
 
   return (
     <View style={styles.container}>
@@ -124,7 +134,10 @@ export default function App() {
               isActive={status === filter}
             />
           ))}
-          <TouchableOpacity style={styles.clearButton}>
+          <TouchableOpacity
+            style={styles.clearButton}
+            onPress={handleRemoveAllItems}
+          >
             <Text style={styles.clearText}>Limpar</Text>
           </TouchableOpacity>
         </View>
